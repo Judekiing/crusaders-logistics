@@ -1,0 +1,11 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home/crusader/public_html/
+    - export BACKENDPATH=/home/crusader/Crusader/Backend/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/mkdir -p $BACKENDPATH
+    - /bin/cp -R dist/* $DEPLOYPATH
+    - /bin/cp public/index.php $DEPLOYPATH
+    - /bin/cp public/.htaccess $DEPLOYPATH
+    - /bin/cp -R backend/* $BACKENDPATH

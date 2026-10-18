@@ -1,0 +1,85 @@
+name: Crusaders Logistics CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to cPanel Shared Hosting
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out repository
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js for Vite React Build
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # Step 3: Install Dependencies
+      - name: Install Dependencies
+        run: npm ci
+
+      # Step 4: Build Production React Frontend
+      - name: Build Vite Production Assets
+        run: npm run build
+
+      # Step 5: Prepare Clean Staging Directories
+      - name: Prepare Staged Public and Backend Directories
+        run: |
+          # 1. Prepare Public Web Root (/public_html)
+          mkdir -p deploy-public
+          cp -r dist/* deploy-public/
+          cp -f public/index.php deploy-public/
+          cp -f public/.htaccess deploy-public/
+          cp -f public/robots.txt deploy-public/ 2>/dev/null || true
+          
+          # Ensure all brand imagery is in place
+          for img in crusaders_logo.jpg crusaders_hero.jpg crusader_air_cargo.jpg crusader_ocean_freight.jpg crusader_smart_hub.jpg crusader_courier.jpg crusader_logo_opt1.jpg crusader_logo_opt2.jpg crusader_logo_opt3.jpg; do
+            if [ -f "public/$img" ]; then
+              cp -f "public/$img" deploy-public/
+            elif [ -f "src/assets/$img" ]; then
+              cp -f "src/assets/$img" deploy-public/
+            fi
+          done
+
+          # 2. Prepare Backend Application (/home/crusader/Crusader/Backend)
+          mkdir -p deploy-backend
+          rsync -av \
+            --exclude='vendor' \
+            --exclude='node_modules' \
+            --exclude='.git' \
+            --exclude='storage/logs/*.log' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            backend/ deploy-backend/
+
+      # Step 6: Deploy Public Web Root via FTPS (SamKirkland/FTP-Deploy-Action)
+      - name: Deploy Frontend & Public Controller to cPanel public_html
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /public_html/
+          local-dir: ./deploy-public/
+          dangerous-clean-slate: false
+
+      # Step 7: Deploy Backend Application (outside public_html)
+      - name: Deploy Backend Core Application to cPanel
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: /Crusader/Backend/
+          local-dir: ./deploy-backend/
+          dangerous-clean-slate: false
