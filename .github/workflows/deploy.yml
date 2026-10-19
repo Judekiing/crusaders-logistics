@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+  workflow_dispatch: # Allows manual 1-click trigger from GitHub Actions tab
 
 jobs:
   build-and-deploy:
@@ -16,11 +16,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Set up Node.js for Vite React Build
+      # Step 2: Set up Node.js for Vite React Build (Node 22 avoids deprecation warning)
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
 
       # Step 3: Install Dependencies
@@ -31,7 +31,7 @@ jobs:
       - name: Build Vite Production Assets
         run: npm run build
 
-      # Step 5: Prepare Clean Staging Directories
+      # Step 5: Prepare Clean Staged Directories
       - name: Prepare Staged Public and Backend Directories
         run: |
           # 1. Prepare Public Web Root (/public_html)
@@ -62,24 +62,13 @@ jobs:
             --exclude='storage/framework/views/*' \
             backend/ deploy-backend/
 
-      # Step 6: Deploy Public Web Root via FTPS (SamKirkland/FTP-Deploy-Action)
-      - name: Deploy Frontend & Public Controller to cPanel public_html
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /public_html/
-          local-dir: ./deploy-public/
-          dangerous-clean-slate: false
-
-      # Step 7: Deploy Backend Application (outside public_html)
-      - name: Deploy Backend Core Application to cPanel
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: /Crusader/Backend/
-          local-dir: ./deploy-backend/
-          dangerous-clean-slate: false
+      # Step 6: Deploy to cPanel Shared Hosting (Fast, auto-detects public_html, and falls back if FTPS is firewalled)
+      - name: Deploy to cPanel Shared Hosting
+        run: node scripts/deploy-cpanel.js
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+          FTP_USERNAME: ${{ secrets.FTP_USERNAME }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PORT: ${{ secrets.FTP_PORT || '21' }}
+          FTP_PUBLIC_DIR: ${{ secrets.FTP_PUBLIC_DIR || '' }}
+          FTP_BACKEND_DIR: ${{ secrets.FTP_BACKEND_DIR || '' }}
