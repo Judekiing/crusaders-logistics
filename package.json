@@ -20,6 +20,7 @@
     "nodemailer": "^10.1.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "ssh2-sftp-client": "^12.1.1",
     "vite": "^8.3.4"
   },
   "devDependencies": {
