@@ -67,8 +67,9 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Check if current user is Global Super Admin
+  // Check if current user is Global Super Admin or Authorized Admin
   const userRole = String(currentUser?.role || '').toLowerCase();
+  const isAdmin = !!(currentUser && userRole.includes('admin'));
   const isSuperAdmin = userRole.includes('super');
 
   // Filter out super_admin details if the logged-in operator is not a Global Super Admin
@@ -161,8 +162,10 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
   const [actionSuccess, setActionSuccess] = useState(null);
 
   useEffect(() => {
-    loadAllData();
-  }, [statusFilter, activityFilter]);
+    if (isAdmin) {
+      loadAllData();
+    }
+  }, [isAdmin, statusFilter, activityFilter]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -330,6 +333,46 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
       loadAllData();
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center px-4 py-16 bg-slate-950">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-6">
+          <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto text-rose-500 shadow-lg shadow-rose-500/20">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div>
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+              <span>Restricted Terminal</span>
+            </div>
+            <h2 className="text-xl font-black text-white">Administrator Access Required</h2>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              This Operations & Dispatch Console is strictly restricted to authenticated Crusaders Logistics personnel. You must sign in with administrator credentials to proceed.
+            </p>
+          </div>
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={() => onOpenAuthModal && onOpenAuthModal('super_admin')}
+              className="w-full bg-gradient-to-r from-flix-500 to-amber-500 hover:from-flix-400 hover:to-amber-400 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-flix-500/25 flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <KeyRound className="w-4 h-4" />
+              <span>Sign In to Admin Console</span>
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/';
+                }
+              }}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+            >
+              Return to Homepage
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">

@@ -22,25 +22,62 @@ export default function CustomerPortalView({ onTrackShipment, onBookNew, current
   const [shipments, setShipments] = useState([]);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
 
-  const user = currentUser?.role === 'customer' ? currentUser : {
-    fullName: 'Jonathan Curr',
-    company: 'ApexTech Imports Ltd',
-    accountNumber: 'CRU-CORP-94812',
-    creditLine: '$100,000 USD Active',
-    dispatcher: 'Elena Rostova (Station Hub #1)'
-  };
+  const isAuthenticated = !!currentUser;
+  const user = currentUser || {};
 
   useEffect(() => {
-    fetchShipments().then(res => {
-      if (res?.success) setShipments(res.data);
-    });
-  }, []);
+    if (isAuthenticated) {
+      fetchShipments().then(res => {
+        if (res?.success) setShipments(res.data);
+      });
+    }
+  }, [isAuthenticated]);
 
   const savedAddresses = [
     { id: 1, name: 'Main Chicago Distribution Dock', contact: 'David Kowalski', address: '8400 Logistics Blvd, Dock 4, Chicago, IL 60666, US', phone: '+1 (312) 555-0199', defaultOrigin: true },
     { id: 2, name: 'Rotterdam Port Terminal Hub', contact: 'Jan Van Houten', address: 'Maasvlakte Haven 820, 3199 LK Rotterdam, NL', phone: '+31 10 555 4912', defaultOrigin: false },
     { id: 3, name: 'Berlin Clinical Depot', contact: 'Dr. H. Weber', address: 'Charitéplatz 1, 10117 Berlin, DE', phone: '+49 30 450 500', defaultOrigin: false },
   ];
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center px-4 py-16 bg-slate-950">
+        <div className="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center shadow-2xl space-y-6">
+          <div className="w-16 h-16 bg-sky-500/10 border border-sky-500/30 rounded-2xl flex items-center justify-center mx-auto text-sky-400 shadow-lg shadow-sky-500/20">
+            <UserCheck className="w-8 h-8" />
+          </div>
+          <div>
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-400 text-[11px] font-bold uppercase tracking-wider mb-2">
+              <span>Shipper Access</span>
+            </div>
+            <h2 className="text-xl font-black text-white">Shipper Sign-In Required</h2>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+              Please sign in to your Crusaders Logistics shipper account to view your consignments, invoices, and profile.
+            </p>
+          </div>
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={() => onOpenAuthModal && onOpenAuthModal('customer')}
+              className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-xl text-xs uppercase tracking-wider transition-all shadow-lg shadow-sky-500/25 flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <span>Sign In to Shipper Portal</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/';
+                }
+              }}
+              className="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-4 rounded-xl text-xs transition-colors cursor-pointer"
+            >
+              Return to Homepage
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">

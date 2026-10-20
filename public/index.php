@@ -347,11 +347,20 @@ if ($uri === '/api/health') {
 if ($uri === '/api/auth/users') {
     if ($method === 'GET') {
         $reqRole = strtolower($_SERVER['HTTP_X_USER_ROLE'] ?? $_GET['role'] ?? '');
+        if (!str_contains($reqRole, 'admin')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'Admin authorization required']);
+            exit;
+        }
         $isSuper = str_contains($reqRole, 'super');
-        $filtered = array_values(array_filter($db['users'] ?? [], function($u) use ($isSuper) {
-            if ($isSuper) return true;
-            return !str_contains(strtolower($u['role'] ?? ''), 'super') && strtolower($u['username'] ?? '') !== 'superadmin';
-        }));
+        $filtered = [];
+        foreach ($db['users'] ?? [] as $u) {
+            if (!$isSuper && (str_contains(strtolower($u['role'] ?? ''), 'super') || strtolower($u['username'] ?? '') === 'superadmin')) {
+                continue;
+            }
+            unset($u['password']);
+            $filtered[] = $u;
+        }
         echo json_encode(['success' => true, 'data' => $filtered]);
         exit;
     }
@@ -367,7 +376,9 @@ if ($uri === '/api/auth/users') {
         $newUser['name'] = $newUser['fullName'];
         $db['users'][] = $newUser;
         putStore($storeFile, $db);
-        echo json_encode(['success' => true, 'data' => $newUser]);
+        $cleanNew = $newUser;
+        unset($cleanNew['password']);
+        echo json_encode(['success' => true, 'data' => $cleanNew]);
         exit;
     }
 }
