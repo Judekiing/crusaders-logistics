@@ -346,7 +346,13 @@ if ($uri === '/api/health') {
 // User List & Management
 if ($uri === '/api/auth/users') {
     if ($method === 'GET') {
-        echo json_encode(['success' => true, 'data' => $db['users']]);
+        $reqRole = strtolower($_SERVER['HTTP_X_USER_ROLE'] ?? $_GET['role'] ?? '');
+        $isSuper = str_contains($reqRole, 'super');
+        $filtered = array_values(array_filter($db['users'] ?? [], function($u) use ($isSuper) {
+            if ($isSuper) return true;
+            return !str_contains(strtolower($u['role'] ?? ''), 'super') && strtolower($u['username'] ?? '') !== 'superadmin';
+        }));
+        echo json_encode(['success' => true, 'data' => $filtered]);
         exit;
     }
     if ($method === 'POST') {

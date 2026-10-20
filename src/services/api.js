@@ -167,7 +167,12 @@ export function clearSavedUser() {
 }
 
 export async function fetchAuthUsers() {
-  const res = await fetch(`${API_BASE}/auth/users`);
+  const user = getSavedUser();
+  const headers = {};
+  if (user?.role) {
+    headers['X-User-Role'] = user.role;
+  }
+  const res = await fetch(`${API_BASE}/auth/users`, { headers });
   return res.json();
 }
 

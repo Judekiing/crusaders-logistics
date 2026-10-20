@@ -67,6 +67,18 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Check if current user is Global Super Admin
+  const userRole = String(currentUser?.role || '').toLowerCase();
+  const isSuperAdmin = userRole.includes('super');
+
+  // Filter out super_admin details if the logged-in operator is not a Global Super Admin
+  const visibleUsers = users.filter(u => {
+    if (isSuperAdmin) return true;
+    const r = String(u.role || '').toLowerCase();
+    const un = String(u.username || '').toLowerCase();
+    return !r.includes('super') && un !== 'superadmin';
+  });
+
   // User Management State
   const [showPasswords, setShowPasswords] = useState({});
   const [addUserOpen, setAddUserOpen] = useState(false);
@@ -389,7 +401,7 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
         <div className="lg:hidden flex items-center space-x-1 mt-6 pt-4 border-t border-slate-800 overflow-x-auto pb-1">
           {[
             { id: 'parcels', label: 'Parcels', icon: Package, count: shipments.length },
-            { id: 'users', label: 'Users', icon: Users, count: users.length },
+            { id: 'users', label: 'Users', icon: Users, count: visibleUsers.length },
             { id: 'activities', label: 'Activities', icon: ActivityIcon, count: activities.length, badge: 'Live' },
             { id: 'quotes', label: 'Quotes', icon: DollarSign, count: quotes.length },
             { id: 'fleet', label: 'Fleet', icon: Truck, count: drivers.length },
@@ -436,7 +448,7 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
             <nav className="space-y-1.5">
               {[
                 { id: 'parcels', label: 'Parcel Manifest', icon: Package, count: shipments.length, desc: 'Waybills & status updates' },
-                { id: 'users', label: 'User Directory', icon: Users, count: users.length, desc: 'Shippers & admin accounts' },
+                { id: 'users', label: 'User Directory', icon: Users, count: visibleUsers.length, desc: 'Shippers & admin accounts' },
                 { id: 'activities', label: 'Live Audit Stream', icon: ActivityIcon, count: activities.length, badge: 'Live', desc: 'Real-time telemetry' },
                 { id: 'quotes', label: 'Commercial Quotes', icon: DollarSign, count: quotes.length, desc: 'Enterprise rate desk' },
                 { id: 'fleet', label: 'Fleet & Drivers', icon: Truck, count: drivers.length, desc: 'Couriers & vehicles' },
@@ -1028,30 +1040,36 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
           </div>
 
           {/* Quick Metrics Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className={`grid gap-4 ${isSuperAdmin ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'}`}>
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Accounts</div>
-              <div className="text-2xl font-black text-slate-900 mt-1">{users.length}</div>
+              <div className="text-2xl font-black text-slate-900 mt-1">{visibleUsers.length}</div>
               <div className="text-[10px] text-emerald-600 font-semibold mt-1">100% Active &amp; Verified</div>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600">Global Super Admins</div>
-              <div className="text-2xl font-black text-purple-900 mt-1">
-                {users.filter(u => String(u.role || '').toLowerCase().includes('super')).length}
+
+            {/* Global Super Admins Card - only visible to Super Admin */}
+            {isSuperAdmin && (
+              <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-purple-600">Global Super Admins</div>
+                <div className="text-2xl font-black text-purple-900 mt-1">
+                  {users.filter(u => String(u.role || '').toLowerCase().includes('super')).length}
+                </div>
+                <div className="text-[10px] text-purple-500 font-semibold mt-1">Full Root Governance</div>
               </div>
-              <div className="text-[10px] text-purple-500 font-semibold mt-1">Full Root Governance</div>
-            </div>
+            )}
+
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
               <div className="text-[10px] font-bold uppercase tracking-wider text-amber-600">Company Dispatch Admins</div>
               <div className="text-2xl font-black text-amber-900 mt-1">
-                {users.filter(u => String(u.role || '').toLowerCase().includes('company')).length}
+                {visibleUsers.filter(u => String(u.role || '').toLowerCase().includes('company')).length}
               </div>
               <div className="text-[10px] text-amber-500 font-semibold mt-1">Station Waybill Control</div>
             </div>
+
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
               <div className="text-[10px] font-bold uppercase tracking-wider text-sky-600">Client / Customer Users</div>
               <div className="text-2xl font-black text-sky-900 mt-1">
-                {users.filter(u => String(u.role || '').toLowerCase().includes('customer')).length}
+                {visibleUsers.filter(u => String(u.role || '').toLowerCase().includes('customer')).length}
               </div>
               <div className="text-[10px] text-sky-500 font-semibold mt-1">Self-Service Shippers</div>
             </div>
@@ -1077,8 +1095,10 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
                 onChange={(e) => setUserRoleFilter(e.target.value)}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-flix-500 bg-slate-50 font-semibold text-slate-700"
               >
-                <option value="ALL">All Roles ({users.length})</option>
-                <option value="super_admin">Global Super Admin</option>
+                <option value="ALL">All Roles ({visibleUsers.length})</option>
+                {isSuperAdmin && (
+                  <option value="super_admin">Global Super Admin</option>
+                )}
                 <option value="company_admin">Company Dispatch Admin</option>
                 <option value="customer">Customer / Shipper</option>
               </select>
@@ -1101,7 +1121,7 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {users
+                  {visibleUsers
                     .filter(u => {
                       const matchRole = userRoleFilter === 'ALL' || String(u.role || '').toLowerCase().includes(userRoleFilter.toLowerCase());
                       const q = searchQuery.toLowerCase();
@@ -1330,7 +1350,9 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
                     onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-flix-500 bg-white"
                   >
-                    <option value="super_admin">Global Super Admin</option>
+                    {isSuperAdmin && (
+                      <option value="super_admin">Global Super Admin</option>
+                    )}
                     <option value="company_admin">Company Dispatch Admin</option>
                     <option value="customer">Customer / Shipper User</option>
                   </select>
