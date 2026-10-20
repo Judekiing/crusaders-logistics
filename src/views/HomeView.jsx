@@ -221,7 +221,7 @@ export default function HomeView({ onSearchTracking, onNavigate }) {
                     type="text"
                     value={trackingInput}
                     onChange={(e) => setTrackingInput(e.target.value)}
-                    placeholder="Enter Tracking ID (e.g. TRN12345 or APX-774921-US)"
+                    placeholder="Enter Consignment Tracking Number..."
                     className="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 font-mono focus:outline-none focus:ring-2 focus:ring-flix-500"
                   />
                   <button
@@ -233,8 +233,7 @@ export default function HomeView({ onSearchTracking, onNavigate }) {
                   </button>
                 </form>
 
-                <div className="mt-2.5 flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Try: <button type="button" onClick={() => onSearchTracking('TRN12345')} className="text-flix-400 font-mono font-bold hover:underline">TRN12345</button> or <button type="button" onClick={() => onSearchTracking('APX-774921-US')} className="text-flix-400 font-mono font-bold hover:underline">APX-774921-US</button></span>
+                <div className="mt-2.5 flex items-center justify-end text-[11px] text-slate-400">
                   <span className="text-emerald-400 font-medium flex items-center space-x-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                     <span>Live GPS Active</span>
@@ -704,7 +703,7 @@ export default function HomeView({ onSearchTracking, onNavigate }) {
                     type="text"
                     value={trackingInput}
                     onChange={(e) => setTrackingInput(e.target.value)}
-                    placeholder="Ex: TRN12345"
+                    placeholder="Enter Consignment Number..."
                     className="flex-1 bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-flix-500"
                   />
                   <button
@@ -715,31 +714,6 @@ export default function HomeView({ onSearchTracking, onNavigate }) {
                   </button>
                 </div>
               </form>
-
-              <div className="pt-2 text-xs text-slate-500 flex flex-wrap items-center gap-2">
-                <span>Demo tracking numbers:</span>
-                <button
-                  type="button"
-                  onClick={() => onSearchTracking('TRN12345')}
-                  className="px-2.5 py-1 rounded bg-white border border-slate-200 font-mono font-bold text-flix-600 hover:bg-slate-100"
-                >
-                  TRN12345 (In Transit)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSearchTracking('APX-304912-EU')}
-                  className="px-2.5 py-1 rounded bg-white border border-slate-200 font-mono font-bold text-amber-600 hover:bg-slate-100"
-                >
-                  APX-304912-EU (Out for Delivery)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onSearchTracking('APX-992100-AS')}
-                  className="px-2.5 py-1 rounded bg-white border border-slate-200 font-mono font-bold text-emerald-600 hover:bg-slate-100"
-                >
-                  APX-992100-AS (Delivered)
-                </button>
-              </div>
             </div>
 
           </div>

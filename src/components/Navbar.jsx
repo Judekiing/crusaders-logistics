@@ -332,29 +332,11 @@ export default function Navbar({
                   </div>
                 )}
               </div>
-            ) : (
-              <button
-                onClick={() => onOpenAuthModal('customer')}
-                className="bg-gradient-to-r from-flix-500 to-amber-500 hover:from-flix-400 hover:to-amber-400 text-white text-xs font-black px-4 py-2 rounded-xl shadow-lg shadow-flix-500/25 transition-all transform hover:-translate-y-0.5 flex items-center space-x-1.5 cursor-pointer"
-                title="Login to Customer Dashboard or Operations Console"
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Dashboard Login</span>
-              </button>
-            )}
+            ) : null}
           </div>
 
           {/* Mobile hamburger */}
           <div className="xl:hidden flex items-center space-x-2">
-            {!currentUser && (
-              <button
-                onClick={() => onOpenAuthModal('customer')}
-                className="bg-flix-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center space-x-1"
-              >
-                <Lock className="w-3 h-3" />
-                <span>Login</span>
-              </button>
-            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2.5 rounded-xl bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-800"
@@ -422,18 +404,7 @@ export default function Navbar({
               </button>
             )}
 
-            {!currentUser ? (
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAuthModal('customer');
-                }}
-                className="w-full flex items-center justify-center space-x-2 px-3 py-2.5 rounded-lg text-xs font-bold bg-gradient-to-r from-flix-500 to-amber-500 text-white"
-              >
-                <Lock className="w-4 h-4" />
-                <span>Dashboard Login</span>
-              </button>
-            ) : (
+            {currentUser && (
               <button
                 onClick={() => {
                   setMobileMenuOpen(false);
