@@ -385,14 +385,14 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
           </div>
         </div>
 
-        {/* Office Tab Navigation */}
-        <div className="flex items-center space-x-1 mt-8 pt-4 border-t border-slate-800 overflow-x-auto">
+        {/* Mobile-Only Horizontal Tab Navigation */}
+        <div className="lg:hidden flex items-center space-x-1 mt-6 pt-4 border-t border-slate-800 overflow-x-auto pb-1">
           {[
-            { id: 'parcels', label: 'Parcel Manifest & Actions', icon: Package, count: shipments.length },
-            { id: 'users', label: 'User Directory & Roles', icon: Users, count: users.length },
-            { id: 'activities', label: 'User Activities & Audit Trail', icon: ActivityIcon, count: activities.length, badge: 'Live' },
-            { id: 'quotes', label: 'Commercial Quotes Desk', icon: DollarSign, count: quotes.length },
-            { id: 'fleet', label: 'Fleet & Driver Units', icon: Truck, count: drivers.length },
+            { id: 'parcels', label: 'Parcels', icon: Package, count: shipments.length },
+            { id: 'users', label: 'Users', icon: Users, count: users.length },
+            { id: 'activities', label: 'Activities', icon: ActivityIcon, count: activities.length, badge: 'Live' },
+            { id: 'quotes', label: 'Quotes', icon: DollarSign, count: quotes.length },
+            { id: 'fleet', label: 'Fleet', icon: Truck, count: drivers.length },
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeOfficeTab === tab.id;
@@ -400,27 +400,127 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
               <button
                 key={tab.id}
                 onClick={() => setActiveOfficeTab(tab.id)}
-                className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap ${
+                className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer whitespace-nowrap ${
                   active 
                     ? 'bg-flix-500 text-white shadow-md' 
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/80'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
-                  <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-mono ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                  <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
                     {tab.count}
                   </span>
-                )}
-                {tab.badge && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                 )}
               </button>
             );
           })}
         </div>
       </div>
+
+      {/* Main Two-Column Side Navbar Layout Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Vertical Side Navbar */}
+        <aside className="hidden lg:block lg:col-span-3 xl:col-span-3 lg:sticky lg:top-24 space-y-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 shadow-xl space-y-5 text-white">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <div className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                Command Console
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+
+            {/* Side Navigation Tabs */}
+            <nav className="space-y-1.5">
+              {[
+                { id: 'parcels', label: 'Parcel Manifest', icon: Package, count: shipments.length, desc: 'Waybills & status updates' },
+                { id: 'users', label: 'User Directory', icon: Users, count: users.length, desc: 'Shippers & admin accounts' },
+                { id: 'activities', label: 'Live Audit Stream', icon: ActivityIcon, count: activities.length, badge: 'Live', desc: 'Real-time telemetry' },
+                { id: 'quotes', label: 'Commercial Quotes', icon: DollarSign, count: quotes.length, desc: 'Enterprise rate desk' },
+                { id: 'fleet', label: 'Fleet & Drivers', icon: Truck, count: drivers.length, desc: 'Couriers & vehicles' },
+              ].map(tab => {
+                const Icon = tab.icon;
+                const active = activeOfficeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveOfficeTab(tab.id)}
+                    className={`w-full p-3 rounded-2xl flex items-center justify-between text-left transition-all cursor-pointer ${
+                      active
+                        ? 'bg-gradient-to-r from-flix-600 to-amber-600 text-white shadow-lg shadow-flix-600/30 font-bold border border-amber-400/30'
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60 border border-transparent font-medium'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Icon className={`w-4 h-4 ${active ? 'text-white' : 'text-slate-400'}`} />
+                      <div>
+                        <div className="text-xs leading-none">{tab.label}</div>
+                        <div className="text-[10px] text-slate-400 font-normal mt-0.5">{tab.desc}</div>
+                      </div>
+                    </div>
+                    {tab.count !== undefined && (
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${active ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                        {tab.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Quick Actions in Sidebar */}
+            <div className="pt-3 border-t border-slate-800 space-y-2">
+              <button
+                onClick={handleOpenAddParcel}
+                className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-flix-500 to-amber-500 hover:from-flix-400 hover:to-amber-400 text-white font-bold text-xs shadow-lg shadow-flix-500/20 flex items-center justify-center space-x-2 transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>+ Add New Parcel</span>
+              </button>
+
+              <button
+                onClick={loadAllData}
+                disabled={loading}
+                className="w-full py-2.5 px-4 rounded-2xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 font-semibold text-xs border border-slate-700/80 flex items-center justify-center space-x-2 transition-colors cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-flix-400' : ''}`} />
+                <span>Sync All Data</span>
+              </button>
+            </div>
+
+            {/* Operational shortcuts */}
+            <div className="pt-3 border-t border-slate-800 space-y-1 text-xs">
+              <button
+                onClick={onOpenEmailViewer}
+                className="w-full p-2.5 rounded-xl hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-between transition-colors"
+              >
+                <span className="flex items-center space-x-2">
+                  <Mail className="w-3.5 h-3.5 text-flix-400" />
+                  <span>Outbox Logs</span>
+                </span>
+                <span className="text-[10px] text-slate-500 font-mono">System &rarr;</span>
+              </button>
+
+              <a
+                href="https://standard7.doveserver.com:2096/cpsess5669445925/3rdparty/roundcube/?_task=mail&_mbox=INBOX"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full p-2.5 rounded-xl hover:bg-slate-800 text-amber-300 hover:text-amber-200 flex items-center justify-between transition-colors"
+              >
+                <span className="flex items-center space-x-2">
+                  <Mail className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Roundcube Webmail</span>
+                </span>
+                <span className="text-[10px] text-amber-400 font-mono">Open &rarr;</span>
+              </a>
+            </div>
+          </div>
+        </aside>
+
+        {/* Right Content Area */}
+        <div className="lg:col-span-9 xl:col-span-9 space-y-6">
 
       {/* Action Notification Alert */}
       {actionSuccess && (
@@ -1280,6 +1380,8 @@ export default function OperationsAdminView({ onOpenEmailViewer, onViewShipment,
           </div>
         </div>
       )}
+        </div>
+      </div>
 
       {/* ========================================================================= */}
       {/* MODAL 1: ADD PARCEL / CONSIGNMENT */}

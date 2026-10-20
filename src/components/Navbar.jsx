@@ -38,7 +38,7 @@ export default function Navbar({
     { id: 'home', label: 'HOME' },
     { id: 'values', label: 'CORE VALUES' },
     { id: 'services', label: 'OUR SERVICES' },
-    { id: 'stats', label: 'STATISTICS' },
+    // { id: 'stats', label: 'STATISTICS' },
     { id: 'rates', label: 'QUOTE' },
     { id: 'contact', label: 'CONTACT US' },
     { id: 'track', label: 'TRACK SHIPMENT' },
@@ -281,7 +281,7 @@ export default function Navbar({
                           )}
                         </button>
 
-                        <button
+                        {/* <button
                           onClick={() => {
                             setUserDropdownOpen(false);
                             handleNavClick('portal');
@@ -290,7 +290,7 @@ export default function Navbar({
                         >
                           <UserCheck className="w-3.5 h-3.5 text-sky-400" />
                           <span>Preview Customer Portal</span>
-                        </button>
+                        </button> */}
                       </>
                     )}
 
@@ -308,7 +308,7 @@ export default function Navbar({
                       </button>
                     )}
 
-                    <button
+                    {/* <button
                       onClick={() => {
                         setUserDropdownOpen(false);
                         onOpenAuthModal();
@@ -317,7 +317,7 @@ export default function Navbar({
                     >
                       <Sparkles className="w-3.5 h-3.5 text-flix-400" />
                       <span>Switch Account / Sign In</span>
-                    </button>
+                    </button> */}
 
                     <button
                       onClick={() => {

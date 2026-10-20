@@ -21,8 +21,6 @@ import { loginUser, createAuthUser } from '../services/api';
 
 export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole = 'customer' }) {
   const [mode, setMode] = useState('login'); // 'login' or 'register'
-  const [showSuperAdminOption, setShowSuperAdminOption] = useState(initialRole === 'super_admin');
-  const [selectedRoleTab, setSelectedRoleTab] = useState(initialRole === 'super_admin' ? 'super_admin' : 'customer');
   
   // Login form state
   const [identifier, setIdentifier] = useState('');
@@ -43,79 +41,29 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
-  // Pre-configured role presets for swift access
-  const rolePresets = {
-    super_admin: {
-      role: 'super_admin',
-      roleLabel: 'Global Super Admin',
-      username: 'superadmin',
-      email: 'superadmin@crusaderslogistics.com',
-      password: 'SuperAdmin@2026!',
-      name: 'Captain Marcus Vance',
-      title: 'Global Fleet Commander',
-      icon: ShieldCheck,
-      badgeColor: 'bg-purple-950 text-purple-400 border-purple-800',
-      btnGradient: 'from-purple-600 to-indigo-600',
-      description: 'Corporate Command: user directory, real-time audit stream, parcel creation & deletion, fleet routing, and quote desk.'
-    },
-    company_admin: {
-      role: 'company_admin',
-      roleLabel: 'Company Dispatch Admin',
-      username: 'companyadmin',
-      email: 'admin@crusaderslogistics.com',
-      password: 'CompanyAdmin@2026!',
-      name: 'Elena Rostova',
-      title: 'Regional Operations Manager',
-      icon: Building2,
-      badgeColor: 'bg-amber-950 text-amber-400 border-amber-800',
-      btnGradient: 'from-amber-500 to-flix-600',
-      description: 'Regional dispatch command: create consignments, assign transit couriers, update milestone checkpoints, and issue e-AWBs.'
-    },
-    customer: {
-      role: 'customer',
-      roleLabel: 'Customer / Shipper User',
-      username: 'customer',
-      email: 'customer@apextech.com',
-      password: 'CustomerUser@2026!',
-      name: 'Jonathan Curr',
-      title: 'Enterprise Shipper (ApexTech)',
-      icon: UserCheck,
-      badgeColor: 'bg-sky-950 text-sky-400 border-sky-800',
-      btnGradient: 'from-sky-500 to-blue-600',
-      description: 'Shipper portal: book cargo, manage consignments, download invoices, print e-Waybills, and track live milestones.'
-    }
-  };
-
   useEffect(() => {
-    if (initialRole === 'super_admin') {
-      setShowSuperAdminOption(true);
-      setSelectedRoleTab('super_admin');
-    } else {
-      setSelectedRoleTab(initialRole || 'customer');
+    if (isOpen) {
+      setError(null);
+      setSuccessMsg(null);
     }
-  }, [initialRole, isOpen]);
-
-  const currentPreset = rolePresets[selectedRoleTab] || rolePresets.customer;
-
-  // Auto-fill preset when tab switches
-  const handleSelectTab = (roleKey) => {
-    setSelectedRoleTab(roleKey);
-    const p = rolePresets[roleKey];
-    setIdentifier(p.username);
-    setPassword(p.password);
-    setError(null);
-  };
+  }, [isOpen]);
 
   // Submit login request
   const handleLoginSubmit = async (e) => {
     if (e) e.preventDefault();
     setError(null);
+
+    const idToSubmit = identifier.trim();
+    const pwdToSubmit = password.trim();
+
+    if (!idToSubmit || !pwdToSubmit) {
+      setError('Please enter your email/username and password.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const idToSubmit = identifier.trim() || currentPreset.username;
-      const pwdToSubmit = password.trim() || currentPreset.password;
-
       const res = await loginUser({
         username: idToSubmit,
         password: pwdToSubmit
@@ -127,10 +75,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
           ...u,
           fullName: u.fullName || u.name || u.username || 'User',
           name: u.fullName || u.name || u.username || 'User',
-          role: String(u.role || currentPreset.role).toLowerCase(),
-          roleLabel: u.roleLabel || currentPreset.roleLabel,
-          avatar: u.avatar || currentPreset.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-          company: u.company || currentPreset.company || 'Crusaders Logistics Shipper'
+          role: String(u.role || 'customer').toLowerCase(),
+          roleLabel: u.roleLabel || (String(u.role).includes('admin') ? 'Operations Admin' : 'Customer / Shipper User'),
+          avatar: u.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          company: u.company || 'Crusaders Logistics Shipper'
         };
         setSuccessMsg(`Authenticated successfully as ${cleanUser.fullName}!`);
         setTimeout(() => {
@@ -139,19 +87,39 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
           setSuccessMsg(null);
         }, 600);
       } else {
-        setError(res?.message || 'Authentication failed. Please verify credentials.');
+        setError(res?.message || 'Authentication failed. Please verify your credentials.');
       }
     } catch (err) {
       console.error('Login error:', err);
       // Offline fallback
+      const idLower = idToSubmit.toLowerCase();
+      let fallbackRole = 'customer';
+      let fallbackName = idToSubmit.split('@')[0];
+      let fallbackLabel = 'Customer / Shipper User';
+      let fallbackCompany = 'Enterprise Shipper Account';
+
+      if (idLower.includes('superadmin') || idLower.includes('marcus')) {
+        fallbackRole = 'super_admin';
+        fallbackName = 'Captain Marcus Vance';
+        fallbackLabel = 'Global Super Admin';
+        fallbackCompany = 'Crusaders Logistics Global Command';
+      } else if (idLower.includes('companyadmin') || idLower.includes('admin') || idLower.includes('elena')) {
+        fallbackRole = 'company_admin';
+        fallbackName = 'Elena Rostova';
+        fallbackLabel = 'Company Dispatch Admin';
+        fallbackCompany = 'Crusaders Logistics Regional Operations';
+      }
+
       const user = {
-        id: `usr-${currentPreset.role}`,
-        username: currentPreset.username,
-        email: currentPreset.email,
-        fullName: currentPreset.name,
-        role: currentPreset.role,
-        roleLabel: currentPreset.roleLabel,
-        company: currentPreset.role === 'customer' ? 'ApexTech Imports Ltd' : 'Crusaders Logistics Global Command'
+        id: `usr-${fallbackRole}`,
+        username: idToSubmit,
+        email: idToSubmit.includes('@') ? idToSubmit : `${idToSubmit}@crusaderslogistics.com`,
+        fullName: fallbackName,
+        name: fallbackName,
+        role: fallbackRole,
+        roleLabel: fallbackLabel,
+        company: fallbackCompany,
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'
       };
       setSuccessMsg(`Logged in as ${user.fullName}`);
       setTimeout(() => {
@@ -225,16 +193,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
 
   if (!isOpen) return null;
 
-  // Build role tabs: Hide Super Admin unless unlocked or initialRole is super_admin
-  const roleTabItems = [
-    { id: 'customer', label: 'Customer Shipper', icon: UserCheck, badge: 'Client' },
-    { id: 'company_admin', label: 'Company Dispatch', icon: Building2, badge: 'Ops' },
-  ];
-
-  if (showSuperAdminOption) {
-    roleTabItems.unshift({ id: 'super_admin', label: 'Global Admin', icon: ShieldCheck, badge: 'Console' });
-  }
-
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fade-in">
       <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full shadow-2xl text-white overflow-hidden relative">
@@ -293,61 +251,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
         {/* LOGIN MODE */}
         {mode === 'login' ? (
           <div>
-            {/* Role Selector Tabs (Only Customer and Company Admin by default) */}
-            <div className="p-6 pb-2">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
-                <span>Select Account Role</span>
-                <span className="text-flix-400 flex items-center space-x-1 text-[10px]">
-                  <Sparkles className="w-3 h-3" />
-                  <span>One-Click Credentials</span>
-                </span>
-              </div>
-
-              <div className={`grid gap-2 ${roleTabItems.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                {roleTabItems.map(tab => {
-                  const Icon = tab.icon;
-                  const isActive = selectedRoleTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleSelectTab(tab.id)}
-                      className={`p-3 rounded-2xl text-left border transition-all flex flex-col justify-between ${
-                        isActive 
-                          ? 'bg-slate-800 border-flix-500 shadow-lg shadow-flix-500/20 text-white' 
-                          : 'bg-slate-950/40 border-slate-800 hover:border-slate-700 text-slate-400'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <Icon className={`w-4 h-4 ${isActive ? 'text-flix-400' : 'text-slate-500'}`} />
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-slate-300">
-                          {tab.badge}
-                        </span>
-                      </div>
-                      <div className="text-xs font-bold leading-tight">{tab.label}</div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Role Preview Card */}
-              <div className="mt-4 p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-sm font-bold text-white">{currentPreset.name}</span>
-                    <div className="text-[11px] text-slate-400">{currentPreset.title}</div>
-                  </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${currentPreset.badgeColor}`}>
-                    {currentPreset.roleLabel}
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed border-t border-slate-900 pt-2">
-                  {currentPreset.description}
-                </p>
-              </div>
-            </div>
-
             {/* Login Form */}
-            <form onSubmit={handleLoginSubmit} className="p-6 pt-3 space-y-4">
+            <form onSubmit={handleLoginSubmit} className="p-6 pt-5 space-y-4">
               {error && (
                 <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -364,24 +269,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
 
               {/* Username / Email */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300 flex justify-between">
-                  <span>Username or Email</span>
-                  <span className="text-[10px] font-mono text-slate-500">Preset: {currentPreset.username}</span>
+                <label className="text-xs font-bold text-slate-300">
+                  Email Address or Username
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
                   <input
                     type="text"
                     value={identifier}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setIdentifier(val);
-                      if (val.toLowerCase() === 'superadmin' && !showSuperAdminOption) {
-                        setShowSuperAdminOption(true);
-                        setSelectedRoleTab('super_admin');
-                      }
-                    }}
-                    placeholder={currentPreset.username}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="name@company.com or username"
                     required
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-flix-500"
                   />
@@ -390,9 +287,8 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
 
               {/* Password */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-300 flex justify-between">
-                  <span>Password</span>
-                  <span className="text-[10px] font-mono text-slate-500">Preset: {currentPreset.password}</span>
+                <label className="text-xs font-bold text-slate-300">
+                  Password
                 </label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-500" />
@@ -400,7 +296,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••••••"
+                    placeholder="Enter your account password"
                     required
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-flix-500"
                   />
@@ -414,55 +310,34 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, initialRole
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIdentifier(currentPreset.username);
-                    setPassword(currentPreset.password);
-                    setTimeout(() => handleLoginSubmit(), 50);
-                  }}
-                  disabled={loading}
-                  className="flex-1 py-3 px-4 rounded-xl text-xs font-black bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center justify-center space-x-1.5 transition-all cursor-pointer"
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-flix-400" />
-                  <span>Quick Sign In ({currentPreset.roleLabel.split(' ')[0]})</span>
-                </button>
-
+              {/* Submit Button */}
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`flex-1 py-3 px-4 rounded-xl text-xs font-black text-white bg-gradient-to-r ${currentPreset.btnGradient} hover:opacity-90 shadow-lg shadow-flix-500/20 flex items-center justify-center space-x-1.5 transition-all cursor-pointer`}
+                  className="w-full py-3.5 px-4 rounded-xl text-xs font-black text-white bg-gradient-to-r from-flix-500 to-amber-600 hover:from-flix-400 hover:to-amber-500 shadow-lg shadow-flix-500/25 flex items-center justify-center space-x-2 transition-all cursor-pointer"
                 >
-                  <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <>
+                      <span>Sign In to Dashboard</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
                 </button>
               </div>
 
-              {/* Discreet operator mode toggle */}
-              <div className="pt-2 flex items-center justify-between text-[11px] text-slate-500">
+              {/* Toggle to Registration */}
+              <div className="pt-2 text-center text-xs text-slate-400">
+                <span>Don't have an account yet? </span>
                 <button
                   type="button"
-                  onClick={() => setMode('register')}
-                  className="hover:text-flix-400 text-slate-400 underline"
+                  onClick={() => { setMode('register'); setError(null); }}
+                  className="text-flix-400 hover:text-flix-300 font-bold underline cursor-pointer"
                 >
-                  Need an account? Register as New Shipper
+                  Register as New Shipper
                 </button>
-                
-                {!showSuperAdminOption && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowSuperAdminOption(true);
-                      handleSelectTab('super_admin');
-                    }}
-                    className="text-[10px] text-slate-600 hover:text-slate-400"
-                    title="Console operator access"
-                  >
-                    Office Console &bull;
-                  </button>
-                )}
               </div>
             </form>
           </div>

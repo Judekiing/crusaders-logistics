@@ -88,39 +88,68 @@ export default function CustomerPortalView({ onTrackShipment, onBookNew, current
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex space-x-2 border-b border-slate-200 pb-2 text-xs font-semibold">
-        {[
-          { id: 'shipments', label: 'My Consignments', icon: Package, count: shipments.length },
-          { id: 'invoices', label: 'Invoices & Waybills', icon: FileText },
-          { id: 'addresses', label: 'Saved Address Book', icon: Bookmark },
-          { id: 'preferences', label: 'Alert Preferences', icon: Bell },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
+      {/* Side Navbar + Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        
+        {/* Left Side Navbar */}
+        <aside className="lg:col-span-3 bg-white rounded-3xl p-5 border border-slate-200 shadow-md space-y-4 lg:sticky lg:top-24">
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-2 border-b border-slate-100 flex items-center justify-between">
+            <span>Shipper Navigation</span>
+            <span className="text-sky-600 font-mono text-[10px]">Tier 1</span>
+          </div>
+
+          <nav className="space-y-1.5">
+            {[
+              { id: 'shipments', label: 'My Consignments', icon: Package, count: shipments.length },
+              { id: 'invoices', label: 'Invoices & Waybills', icon: FileText },
+              { id: 'addresses', label: 'Saved Address Book', icon: Bookmark },
+              { id: 'preferences', label: 'Alert Preferences', icon: Bell },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full px-3.5 py-3 rounded-2xl flex items-center justify-between text-xs font-bold transition-all text-left ${
+                    isActive
+                      ? 'bg-sky-600 text-white shadow-md shadow-sky-600/25 border border-sky-500'
+                      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2.5">
+                    <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    <span>{tab.label}</span>
+                  </div>
+                  {tab.count !== undefined && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
+          <div className="pt-3 border-t border-slate-100 space-y-2">
             <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2.5 rounded-xl flex items-center space-x-2 transition-all ${
-                isActive
-                  ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
+              onClick={onBookNew}
+              className="w-full bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-bold py-3 px-4 rounded-2xl text-xs transition-all shadow-md shadow-sky-500/20 flex items-center justify-center space-x-1.5 cursor-pointer"
             >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
-                  isActive ? 'bg-white text-sky-800' : 'bg-slate-200 text-slate-700'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
+              <Package className="w-4 h-4" />
+              <span>+ Book Consignment</span>
             </button>
-          );
-        })}
-      </div>
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-[11px] text-slate-500 space-y-1">
+              <div className="font-semibold text-slate-700">Account Credit</div>
+              <div className="text-emerald-600 font-mono font-bold">{user.creditLine || '$100,000 USD Active'}</div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Right Content Area */}
+        <div className="lg:col-span-9 space-y-6">
 
       {/* TAB 1: SHIPMENTS */}
       {activeTab === 'shipments' && (
@@ -289,6 +318,8 @@ export default function CustomerPortalView({ onTrackShipment, onBookNew, current
           </div>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 }

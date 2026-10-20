@@ -659,13 +659,111 @@ if (preg_match('#^/api/shipments/([^/]+)(/status)?$#', $uri, $m)) {
     }
 }
 
-// Calculate Rates
+// Calculate Rates (Full IATA Freight Engine)
 if ($uri === '/api/rates/calculate' && $method === 'POST') {
-    $wt = floatval($body['weightKg'] ?? $body['weight'] ?? 5);
-    $srv = $body['serviceType'] ?? 'express_air';
-    $rate = ($srv === 'express_air') ? 8.5 : (($srv === 'ocean_freight') ? 2.2 : 3.8);
-    $cost = round(45.0 + ($wt * $rate), 2);
-    echo json_encode(['success' => true, 'data' => ['estimatedCost' => $cost, 'currency' => 'USD', 'transitDays' => ($srv === 'express_air' ? '1 - 3 Days' : '14 - 28 Days'), 'serviceName' => ucwords(str_replace('_', ' ', $srv)), 'weightKg' => $wt]]);
+    $origin = strtoupper($body['originCountry'] ?? 'US');
+    $dest = strtoupper($body['destCountry'] ?? 'US');
+    $weightKg = max(1, floatval($body['weightKg'] ?? $body['weight'] ?? 10));
+    $lengthCm = max(10, floatval($body['lengthCm'] ?? $body['length'] ?? 40));
+    $widthCm = max(10, floatval($body['widthCm'] ?? $body['width'] ?? 30));
+    $heightCm = max(10, floatval($body['heightCm'] ?? $body['height'] ?? 25));
+    $pieces = max(1, intval($body['pieces'] ?? 1));
+    $declaredValue = floatval($body['declaredValue'] ?? 0);
+    $insuranceRequired = !empty($body['insuranceRequired']);
+    $signatureRequired = !empty($body['signatureRequired']);
+
+    $volumetricWeightPerPiece = ($lengthCm * $widthCm * $heightCm) / 5000.0;
+    $totalVolumetricWeight = $volumetricWeightPerPiece * $pieces;
+    $chargeableWeight = max($weightKg, $totalVolumetricWeight);
+    $isInternational = ($origin !== $dest);
+    $intlMultiplier = $isInternational ? 1.45 : 1.0;
+
+    $insuranceFee = ($insuranceRequired && $declaredValue > 0) ? max(25.0, $declaredValue * 0.0075) : 0.0;
+    $signatureFee = $signatureRequired ? 15.0 : 0.0;
+
+    $services = [
+        [
+            'serviceId' => 'express_air',
+            'name' => 'Apex Priority Air Express',
+            'baseFee' => 95.0,
+            'ratePerKg' => 11.80,
+            'transitTime' => '1-2 Business Days',
+            'description' => 'Time-critical air courier with guaranteed delivery slot and next-day arrival.'
+        ],
+        [
+            'serviceId' => 'standard_ground',
+            'name' => 'Apex Intermodal Ground Freight',
+            'baseFee' => 45.0,
+            'ratePerKg' => 2.85,
+            'transitTime' => '3-5 Business Days',
+            'description' => 'Cost-effective nationwide road and rail network for commercial palletized cargo.'
+        ],
+        [
+            'serviceId' => 'ocean_cargo',
+            'name' => 'Apex Ocean Maritime FCL/LCL',
+            'baseFee' => 180.0,
+            'ratePerKg' => 0.85,
+            'transitTime' => '14-22 Business Days',
+            'description' => 'Maximum efficiency for large-scale container loads and bulk international freight.'
+        ],
+        [
+            'serviceId' => 'cold_chain',
+            'name' => 'Apex BioPharma Active Cold-Chain',
+            'baseFee' => 150.0,
+            'ratePerKg' => 8.40,
+            'transitTime' => '2-4 Business Days',
+            'description' => 'Certified GDP temperature-controlled transit (2°C-8°C / -20°C) with continuous IoT telemetry.'
+        ],
+        [
+            'serviceId' => 'last_mile',
+            'name' => 'Apex Urban Last-Mile Express',
+            'baseFee' => 30.0,
+            'ratePerKg' => 4.50,
+            'transitTime' => 'Same-Day / Next-Day',
+            'description' => 'Dedicated electric courier fleet for rapid metropolitan and direct-to-door delivery.'
+        ]
+    ];
+
+    $options = [];
+    foreach ($services as $srv) {
+        $baseCargoCost = ($srv['baseFee'] + ($srv['ratePerKg'] * $chargeableWeight)) * $intlMultiplier;
+        $fuelSurcharge = $baseCargoCost * 0.12;
+        $customsFee = $isInternational ? 65.0 : 0.0;
+        $subtotal = $baseCargoCost + $fuelSurcharge + $customsFee + $insuranceFee + $signatureFee;
+        $total = round($subtotal, 2);
+
+        $options[] = [
+            'serviceId' => $srv['serviceId'],
+            'name' => $srv['name'],
+            'transitTime' => $srv['transitTime'],
+            'description' => $srv['description'],
+            'breakdown' => [
+                'baseFee' => round($srv['baseFee'] * $intlMultiplier, 2),
+                'weightCharge' => round($srv['ratePerKg'] * $chargeableWeight * $intlMultiplier, 2),
+                'chargeableWeightKg' => round($chargeableWeight, 1),
+                'volumetricWeightKg' => round($totalVolumetricWeight, 1),
+                'actualWeightKg' => $weightKg,
+                'fuelSurcharge' => round($fuelSurcharge, 2),
+                'customsClearanceFee' => round($customsFee, 2),
+                'insuranceFee' => round($insuranceFee, 2),
+                'signatureFee' => round($signatureFee, 2),
+            ],
+            'currency' => 'USD',
+            'totalPrice' => $total
+        ];
+    }
+
+    echo json_encode([
+        'success' => true,
+        'data' => [
+            'chargeableWeight' => round($chargeableWeight, 1),
+            'volumetricWeight' => round($totalVolumetricWeight, 1),
+            'actualWeight' => $weightKg,
+            'isInternational' => $isInternational,
+            'options' => $options,
+            'recommendedService' => $options[0]
+        ]
+    ]);
     exit;
 }
 

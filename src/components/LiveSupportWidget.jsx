@@ -230,31 +230,49 @@ export default function LiveSupportWidget({ onNavigate }) {
 
           {/* Message Input Form */}
           <form onSubmit={handleSendMessage} className="p-3 bg-slate-900 border-t border-slate-800 space-y-2">
-            {/* Contact details row if not yet filled */}
-            {(!email || !name) && (
+            {/* Contact details row - persistent and stable */}
+            {(!sentSuccess) ? (
               <div className="grid grid-cols-2 gap-2 pb-1">
-                <input
-                  type="text"
-                  placeholder="Your Name *"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-flix-500"
-                />
-                <input
-                  type="email"
-                  placeholder="Your Email *"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-flix-500"
-                />
+                <div>
+                  <input
+                    type="text"
+                    tabIndex={1}
+                    placeholder="Your Name *"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-flix-500"
+                  />
+                </div>
+                <div>
+                  <input
+                    type="email"
+                    tabIndex={2}
+                    placeholder="Your Email *"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-flix-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-1 text-[11px] text-slate-400">
+                <span className="truncate">Chatting as: <strong className="text-white">{name}</strong> ({email})</span>
+                <button
+                  type="button"
+                  onClick={() => setSentSuccess(false)}
+                  className="text-flix-400 hover:underline text-[10px] ml-2 flex-shrink-0"
+                >
+                  Edit
+                </button>
               </div>
             )}
 
             <div className="flex items-center space-x-2">
               <input
                 type="text"
+                tabIndex={3}
                 placeholder={email ? "Type your message here..." : "Type message & enter email above..."}
                 required
                 value={message}
@@ -263,6 +281,7 @@ export default function LiveSupportWidget({ onNavigate }) {
               />
               <button
                 type="submit"
+                tabIndex={4}
                 disabled={sending || !message.trim()}
                 className="bg-flix-500 hover:bg-flix-600 disabled:opacity-50 text-white p-2.5 rounded-xl transition-all shadow-md shadow-flix-500/20 cursor-pointer flex-shrink-0"
               >

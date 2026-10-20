@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { AlertCircle } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import LiveEmailModal from './components/LiveEmailModal';
@@ -26,18 +27,29 @@ import {
 } from './services/api';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
+  const [currentUser, setCurrentUser] = useState(() => {
+    return getSavedUser() || null;
+  });
+
+  // Default initial tab: if logged in, stay directly on user's dashboard!
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = getSavedUser();
+    if (saved) {
+      const role = String(saved.role || '').toLowerCase();
+      return role.includes('admin') ? 'admin' : 'portal';
+    }
+    return 'home';
+  });
+
   const [selectedTrackingCode, setSelectedTrackingCode] = useState('TRN12345');
   const [inspectingNotification, setInspectingNotification] = useState(null);
   const [notificationCount, setNotificationCount] = useState(3);
   const [isOfficeSubdomain, setIsOfficeSubdomain] = useState(false);
+  const [inactivityNotice, setInactivityNotice] = useState(false);
 
-  // Authentication State - Defaults to guest / customer
+  // Authentication State
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authInitialRole, setAuthInitialRole] = useState('customer');
-  const [currentUser, setCurrentUser] = useState(() => {
-    return getSavedUser() || null;
-  });
 
   // Check URL query params & office.domain.com subdomain routing on mount
   useEffect(() => {
@@ -84,8 +96,18 @@ export default function App() {
         entityType: 'shipment',
         entityId: trackingParam
       });
+    } else if (tabParam === 'login' || pathname === '/login') {
+      setAuthInitialRole('customer');
+      setAuthModalOpen(true);
     } else if (tabParam) {
       setActiveTab(tabParam);
+    } else {
+      // If user is already signed in and no specific tab given, keep them on their dashboard
+      const saved = getSavedUser();
+      if (saved) {
+        const role = String(saved.role || '').toLowerCase();
+        setActiveTab(role.includes('admin') ? 'admin' : 'portal');
+      }
     }
 
     // Refresh notification count periodically
@@ -101,6 +123,37 @@ export default function App() {
     };
     checkCount();
   }, []);
+
+  // 10-Minute Inactivity Auto-Logout Timer
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes in milliseconds
+    let timer = null;
+
+    const performLogout = () => {
+      clearSavedUser();
+      setCurrentUser(null);
+      setActiveTab('home');
+      setInactivityNotice(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const resetTimer = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(performLogout, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach(ev => window.addEventListener(ev, resetTimer, { passive: true }));
+
+    resetTimer();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      events.forEach(ev => window.removeEventListener(ev, resetTimer));
+    };
+  }, [currentUser]);
 
   const handleNavigate = (tab) => {
     if (tab === 'values' || tab === 'stats') {
@@ -149,6 +202,13 @@ export default function App() {
     }
   };
 
+  const handleLogout = () => {
+    clearSavedUser();
+    setCurrentUser(null);
+    setActiveTab('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-800 font-sans selection:bg-flix-500 selection:text-white">
       {/* Top Navigation */}
@@ -162,11 +222,36 @@ export default function App() {
           setAuthInitialRole(role || 'customer');
           setAuthModalOpen(true);
         }}
-        onLogout={() => {
-          clearSavedUser();
-          setCurrentUser(null);
-        }}
+        onLogout={handleLogout}
       />
+
+      {/* Inactivity Auto-Logout Security Notification Banner */}
+      {inactivityNotice && (
+        <div className="bg-amber-500 text-slate-950 font-bold px-4 py-3 flex items-center justify-between text-xs animate-fade-in shadow-md">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-4 h-4 text-slate-950 flex-shrink-0" />
+            <span>You have been automatically signed out after 10 minutes of inactivity for your session security.</span>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => {
+                setInactivityNotice(false);
+                setAuthInitialRole('customer');
+                setAuthModalOpen(true);
+              }}
+              className="underline hover:text-black font-extrabold cursor-pointer"
+            >
+              Sign In Again
+            </button>
+            <button
+              onClick={() => setInactivityNotice(false)}
+              className="text-slate-950 hover:opacity-70 p-1 font-bold"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main View Area */}
       <main className="flex-1">

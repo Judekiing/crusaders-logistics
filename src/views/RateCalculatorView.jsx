@@ -46,6 +46,65 @@ export default function RateCalculatorView({ onSelectRateToBook, onOpenOutbox })
   const [quoteSuccess, setQuoteSuccess] = useState(null);
   const [submittingQuote, setSubmittingQuote] = useState(false);
 
+  const computeLocalRates = (p) => {
+    const origin = (p.originCountry || 'US').toUpperCase();
+    const dest = (p.destCountry || 'DE').toUpperCase();
+    const weightKg = Math.max(1, parseFloat(p.weightKg) || 1);
+    const lengthCm = Math.max(10, parseFloat(p.lengthCm) || 40);
+    const widthCm = Math.max(10, parseFloat(p.widthCm) || 30);
+    const heightCm = Math.max(10, parseFloat(p.heightCm) || 25);
+    const pieces = Math.max(1, parseInt(p.pieces) || 1);
+    const declaredValue = parseFloat(p.declaredValue) || 0;
+    const isInternational = origin !== dest;
+    const intlMultiplier = isInternational ? 1.45 : 1.0;
+    const volWeight = ((lengthCm * widthCm * heightCm) / 5000) * pieces;
+    const chargeable = Math.max(weightKg, volWeight);
+    const insuranceFee = p.insuranceRequired && declaredValue > 0 ? Math.max(25, declaredValue * 0.0075) : 0;
+    const signatureFee = p.signatureRequired ? 15.0 : 0;
+
+    const tiers = [
+      { serviceId: 'express_air', name: 'Apex Priority Air Express', baseFee: 95.0, ratePerKg: 11.80, transitTime: '1-2 Business Days', description: 'Time-critical air courier with guaranteed delivery slot and next-day arrival.' },
+      { serviceId: 'standard_ground', name: 'Apex Intermodal Ground Freight', baseFee: 45.0, ratePerKg: 2.85, transitTime: '3-5 Business Days', description: 'Cost-effective nationwide road and rail network for commercial palletized cargo.' },
+      { serviceId: 'ocean_cargo', name: 'Apex Ocean Maritime FCL/LCL', baseFee: 180.0, ratePerKg: 0.85, transitTime: '14-22 Business Days', description: 'Maximum efficiency for large-scale container loads and bulk international freight.' },
+      { serviceId: 'cold_chain', name: 'Apex BioPharma Active Cold-Chain', baseFee: 150.0, ratePerKg: 8.40, transitTime: '2-4 Business Days', description: 'Certified GDP temperature-controlled transit (2°C-8°C / -20°C) with continuous IoT telemetry.' },
+      { serviceId: 'last_mile', name: 'Apex Urban Last-Mile Express', baseFee: 30.0, ratePerKg: 4.50, transitTime: 'Same-Day / Next-Day', description: 'Dedicated electric courier fleet for rapid metropolitan and direct-to-door delivery.' }
+    ];
+
+    const options = tiers.map(t => {
+      const baseCargoCost = (t.baseFee + (t.ratePerKg * chargeable)) * intlMultiplier;
+      const fuel = baseCargoCost * 0.12;
+      const customs = isInternational ? 65.0 : 0.0;
+      const total = Math.round((baseCargoCost + fuel + customs + insuranceFee + signatureFee) * 100) / 100;
+      return {
+        serviceId: t.serviceId,
+        name: t.name,
+        transitTime: t.transitTime,
+        description: t.description,
+        breakdown: {
+          baseFee: Math.round(t.baseFee * intlMultiplier * 100) / 100,
+          weightCharge: Math.round(t.ratePerKg * chargeable * intlMultiplier * 100) / 100,
+          chargeableWeightKg: Math.round(chargeable * 10) / 10,
+          volumetricWeightKg: Math.round(volWeight * 10) / 10,
+          actualWeightKg: weightKg,
+          fuelSurcharge: Math.round(fuel * 100) / 100,
+          customsClearanceFee: customs,
+          insuranceFee: Math.round(insuranceFee * 100) / 100,
+          signatureFee
+        },
+        currency: 'USD',
+        totalPrice: total
+      };
+    });
+
+    return {
+      chargeableWeight: Math.round(chargeable * 10) / 10,
+      volumetricWeight: Math.round(volWeight * 10) / 10,
+      actualWeight: weightKg,
+      isInternational,
+      options
+    };
+  };
+
   useEffect(() => {
     runCalculation();
   }, []);
@@ -54,11 +113,14 @@ export default function RateCalculatorView({ onSelectRateToBook, onOpenOutbox })
     setLoading(true);
     try {
       const res = await calculateRates(params);
-      if (res && res.success) {
+      if (res && res.success && res.data && Array.isArray(res.data.options)) {
         setRateResults(res.data);
+      } else {
+        setRateResults(computeLocalRates(params));
       }
     } catch (err) {
-      console.error('Calculation error:', err);
+      console.warn('Calculation error, using local engine:', err);
+      setRateResults(computeLocalRates(params));
     } finally {
       setLoading(false);
     }
@@ -244,7 +306,13 @@ export default function RateCalculatorView({ onSelectRateToBook, onOpenOutbox })
 
         {/* Right Output Comparison Column */}
         <div className="lg:col-span-7 space-y-6">
-          {rateResults && (
+          {loading ? (
+            <div className="bg-white rounded-3xl p-12 border border-slate-200 shadow-xl text-center space-y-4">
+              <div className="w-10 h-10 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <div className="text-slate-800 font-bold text-sm">Computing IATA Dimensional Weights & Rates...</div>
+              <p className="text-slate-500 text-xs">Evaluating standard air, road freight, ocean container, and cold-chain carrier tariffs.</p>
+            </div>
+          ) : rateResults && rateResults.options && (
             <>
               {/* Volumetric Weight Technical Box */}
               <div className="bg-slate-900 text-white rounded-3xl p-6 border border-slate-800 shadow-xl">
@@ -254,15 +322,15 @@ export default function RateCalculatorView({ onSelectRateToBook, onOpenOutbox })
                       IATA Volumetric Weight Analysis
                     </div>
                     <div className="text-xl font-black text-white mt-0.5">
-                      Chargeable Weight: <span className="text-sky-400 font-mono">{rateResults.chargeableWeight} kg</span>
+                      Chargeable Weight: <span className="text-sky-400 font-mono">{rateResults.chargeableWeight || 0} kg</span>
                     </div>
                   </div>
                   <div className="flex items-center space-x-4 text-xs font-mono">
                     <div className="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                      Actual: <span className="text-white font-bold">{rateResults.actualWeight} kg</span>
+                      Actual: <span className="text-white font-bold">{rateResults.actualWeight || 0} kg</span>
                     </div>
                     <div className="bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                      Volumetric: <span className="text-white font-bold">{rateResults.volumetricWeight} kg</span>
+                      Volumetric: <span className="text-white font-bold">{rateResults.volumetricWeight || 0} kg</span>
                     </div>
                   </div>
                 </div>
@@ -274,7 +342,7 @@ export default function RateCalculatorView({ onSelectRateToBook, onOpenOutbox })
 
               {/* Service Tiers List */}
               <div className="space-y-4">
-                {rateResults.options.map((opt) => (
+                {(rateResults.options || []).map((opt) => (
                   <div
                     key={opt.serviceId}
                     className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-md hover:shadow-xl transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
