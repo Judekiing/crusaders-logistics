@@ -182,18 +182,28 @@ export default function App() {
     const saved = getSavedUser();
     const role = String(saved?.role || '').toLowerCase();
     
-    // If modal is closed without valid credentials on a protected route,
+    // Check URL parameters
+    const params = new URLSearchParams(window.location.search);
+    const hasAdminQuery = params.get('tab') === 'admin' || params.has('office');
+    const hasPortalQuery = params.get('tab') === 'portal' || params.get('tab') === 'login';
+
+    // If modal is closed without valid credentials on a protected route or with protected URL params,
     // immediately redirect back to home page and clear URL parameters
-    if (activeTab === 'admin' && (!saved || !role.includes('admin'))) {
-      setActiveTab('home');
-      try {
-        window.history.replaceState({}, '', '/');
-      } catch (e) {}
-    } else if (activeTab === 'portal' && !saved) {
-      setActiveTab('home');
-      try {
-        window.history.replaceState({}, '', '/');
-      } catch (e) {}
+    if (!saved || !role.includes('admin')) {
+      if (activeTab === 'admin' || hasAdminQuery) {
+        setActiveTab('home');
+        try {
+          window.history.replaceState({}, '', '/');
+        } catch (e) {}
+      }
+    }
+    if (!saved) {
+      if (activeTab === 'portal' || hasPortalQuery) {
+        setActiveTab('home');
+        try {
+          window.history.replaceState({}, '', '/');
+        } catch (e) {}
+      }
     }
   };
 
@@ -504,7 +514,7 @@ export default function App() {
           setAuthModalOpen(false);
 
           // Direct immediately to appropriate dashboard:
-          if (rawRole.includes('admin') || isOfficeSubdomain) {
+          if (rawRole.includes('admin')) {
             setActiveTab('admin');
           } else {
             setActiveTab('portal');
